@@ -71,8 +71,11 @@ class Tool:
                 cv2.imshow(self.windowName, image_cv2)  # type: ignore
                 a = cv2.waitKey(1)
                 if a == ord('Y') or a == ord('y'):
-                    cv2.imwrite("datasets/original/images/" + str(self.count) + ".jpeg", image_cv2_original)
-                    file = open("datasets/original/labels/" + str(self.count) + ".txt", "w")
+                    for i in range(len(self.saveRetangle)):
+                        cv2.imwrite("datasets/original/images/" + str(self.count) + str(i) + ".jpeg",
+                                    image_cv2_original[self.saveRetangle[i][0][1]:self.saveRetangle[i][1][1],
+                                    self.saveRetangle[i][0][0]:self.saveRetangle[i][1][0]])
+                        file = open("datasets/original/labels/" + str(self.count) + str(i) + ".txt", "w")
                     file.write('0 ')
                     for i in range(len(self.saveRetangle)):
                         file.write(str(self.saveRetangle[i][0][0] / 800) + ' ' + str(
