@@ -1,8 +1,11 @@
 import glob
 import sys
-
+from ultralytics import YOLO
 import cv2
+import os
 import numpy as np
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
+import split
 
 
 class Stack:
@@ -103,6 +106,9 @@ class Tool:
                     else:
                         print("Cannot undo.")
         cv2.destroyAllWindows()
+        print("Finish")
+        print("Splitting dataset...")
+        split.split("datasets/original", 0.8, 0.1, 0.1, "datasets/split")
 
 
 if __name__ == "__main__":
@@ -113,3 +119,42 @@ if __name__ == "__main__":
         imageSource = imageSource + glob.glob("test/*.bmp")
         tool = Tool(imageSource)
         tool.Run()
+    elif sys.argv[1] == "train":
+        # split.split("datasets/original", 0.8, 0.1, 0.1, "datasets/split")
+        file = open("a.yaml", "w")
+        file.write("train: D:\\documents\\GitHub\\Image-Train-Tool-for-YOLO\\datasets\split\\train\\train.txt\n")
+        file.write("val: D:\\documents\\GitHub\\Image-Train-Tool-for-YOLO\\datasets\\split\\valid\\valid.txt\n")
+        file.write("nc: 1\n")
+        file.write("names: \n 0: haibara\n")
+        file.close()
+        file = open("yolov8.yaml", "r+")
+        content = file.read()
+        file.close()
+        content = content.replace("nc: 80", "nc: 1")
+        file = open("yolov8.yaml", "w")
+        file.write(content)
+        file.close()
+        # Load a model
+        model = YOLO('yolov8.yaml').load("yolov8n.pt")  # load a pretrained model (recommended for training)
+
+        # Train the model
+        results = model.train(data='D:\\documents\\GitHub\\Image-Train-Tool-for-YOLO\\a.yaml', epochs=700, imgsz=800, patience=0)
+    elif sys.argv[1] == 'detect':
+        model = YOLO('runs/detect/train3/weights/best.pt')
+        imageSource = glob.glob("test/*.jpeg")
+        imageSource = imageSource + glob.glob("test/*.jpg")
+        imageSource = imageSource + glob.glob("test/*.png")
+        imageSource = imageSource + glob.glob("test/*.bmp")
+        for image in imageSource:
+            img = cv2.imread(image)
+            img = cv2.resize(img, (800, 800))
+            results = model(img)
+            for i in results:
+                for j in i.boxes:
+                    xyxy = j.xyxy[0]
+                    cls = j.cls
+                    label = results[0].names[int(cls)]
+                    cv2.putText(img, label, (int(xyxy[0]), int(xyxy[1])), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    cv2.rectangle(img, (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3])), (0, 255, 0), 2)
+            cv2.imshow("Detect", img)
+            cv2.waitKey(0)
