@@ -13,17 +13,12 @@ class Stack:
         self.stack = []
 
     def push(self, item: np.ndarray):
-        self.stack.append(item)
+        self.stack.append(item.copy())
 
     def pop(self) -> np.ndarray:
         if len(self.stack) == 0:
             return np.array([])
-        return self.stack.pop(-1)
-
-    def top(self) -> np.ndarray:
-        if len(self.stack) == 0:
-            return np.array([])
-        return self.stack[-1]
+        return self.stack.pop(-1).copy()
 
     def clear(self):
         self.stack = []
@@ -97,12 +92,11 @@ class Tool:
                     self.workStack.clear()
                     self.saveRetangle = []
                     image_cv2 = image_cv2_original.copy()
-                    self.workStack.push(image_cv2.copy())
+                    self.workStack.push(image_cv2)
                 elif a == ord('z') or a == ord('Z'):
                     if self.workStack.stack.__len__() > 1:
                         self.workStack.pop()
-                        image_cv2: np.ndarray = self.workStack.top().copy()
-                        self.saveRetangle.pop()
+                        image_cv2: np.ndarray = self.saveRetangle.pop()
                     else:
                         print("Cannot undo.")
         cv2.destroyAllWindows()
