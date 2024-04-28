@@ -108,10 +108,10 @@ class Tool:
                 elif a == ord('q') or a == ord('Q'):
                     break
                 elif a == ord('c') or a == ord('C') or a == ord('N') or a == ord('n'):
-                    self.workStack.clear()
                     self.saveRetangle = []
+                    self.workStackTemp.clear()
                     image_cv2 = image_cv2_original.copy()
-                    self.workStack.push(image_cv2.copy())
+                    self.workStack.push(image_cv2)
                 elif a == ord('z') or a == ord('Z'):
                     if self.workStack.length() > 1:
                         self.workStackTemp.push(self.workStack.pop())
