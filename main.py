@@ -1,10 +1,12 @@
 import glob
-import sys
-from ultralytics import YOLO
-import cv2
 import os
+import sys
+
+import cv2
 import numpy as np
-os.environ['KMP_DUPLICATE_LIB_OK']='True'
+from ultralytics import YOLO
+
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 import split
 
 
@@ -13,25 +15,31 @@ class Stack:
         self.stack = []
 
     def push(self, item: np.ndarray):
-        self.stack.append(item)
+        self.stack.append(item.copy())
 
     def pop(self) -> np.ndarray:
         if len(self.stack) == 0:
             return np.array([])
-        return self.stack.pop(-1)
+        data = self.stack.pop(-1)
+        return data.copy()
 
     def top(self) -> np.ndarray:
         if len(self.stack) == 0:
             return np.array([])
-        return self.stack[-1]
+        data = self.stack[-1]
+        return data.copy()
 
     def clear(self):
         self.stack = []
+
+    def length(self) -> int:
+        return len(self.stack)
 
 
 class Tool:
     def __init__(self, imageSource: list):
         self.workStack = Stack()
+        self.workStackTemp = Stack()
         self.imageSource = imageSource
         self.selectRetangle = []
         self.saveRetangle = []
@@ -46,6 +54,7 @@ class Tool:
         elif event == cv2.EVENT_LBUTTONDOWN and self.isSelecting:
             self.selectRetangle.append((x, y))
             self.isSelecting = False
+            self.workStackTemp.clear()
         elif event == cv2.EVENT_RBUTTONDOWN:
             self.selectRetangle = []
             self.isSelecting = False
@@ -74,10 +83,15 @@ class Tool:
                 cv2.imshow(self.windowName, image_cv2)  # type: ignore
                 a = cv2.waitKey(1)
                 if a == ord('Y') or a == ord('y'):
-                    for i in range(len(self.saveRetangle)):
-                        cv2.imwrite("datasets/original/images/" + str(self.count) + ".jpeg",
-                                    image_cv2_original)
-                        file = open("datasets/original/labels/" + str(self.count) + ".txt", "w")
+                    if self.workStackTemp.length() > 0:
+                        self.workStack.push(self.workStackTemp.pop())
+                        image_cv2 = self.workStack.top()
+                    else:
+                        print("Cannot redo.")
+                elif a == ord('P') or a == ord('p'):
+                    cv2.imwrite("datasets/original/images/" + str(self.count) + ".jpeg",
+                                image_cv2_original)
+                    file = open("datasets/original/labels/" + str(self.count) + ".txt", "w")
                     file.write('0 ')
                     for i in range(len(self.saveRetangle)):
                         file.write(str(self.saveRetangle[i][0][0] / 800) + ' ' + str(
@@ -99,10 +113,10 @@ class Tool:
                     image_cv2 = image_cv2_original.copy()
                     self.workStack.push(image_cv2.copy())
                 elif a == ord('z') or a == ord('Z'):
-                    if self.workStack.stack.__len__() > 1:
-                        self.workStack.pop()
-                        image_cv2: np.ndarray = self.workStack.top().copy()
-                        self.saveRetangle.pop()
+                    if self.workStack.length() > 1:
+                        self.workStackTemp.push(self.workStack.pop())
+                        image_cv2: np.ndarray = self.workStack.top()
+                        self.saveRetangle = []
                     else:
                         print("Cannot undo.")
         cv2.destroyAllWindows()
@@ -138,23 +152,35 @@ if __name__ == "__main__":
         model = YOLO('yolov8.yaml').load("yolov8n.pt")  # load a pretrained model (recommended for training)
 
         # Train the model
-        results = model.train(data='D:\\documents\\GitHub\\Image-Train-Tool-for-YOLO\\a.yaml', epochs=700, imgsz=800, patience=0)
+        results = model.train(data='D:\\documents\\GitHub\\Image-Train-Tool-for-YOLO\\a.yaml', epochs=700, imgsz=800,
+                              patience=0)
     elif sys.argv[1] == 'detect':
-        model = YOLO('runs/detect/train3/weights/best.pt')
-        imageSource = glob.glob("test/*.jpeg")
-        imageSource = imageSource + glob.glob("test/*.jpg")
-        imageSource = imageSource + glob.glob("test/*.png")
-        imageSource = imageSource + glob.glob("test/*.bmp")
-        for image in imageSource:
-            img = cv2.imread(image)
-            img = cv2.resize(img, (800, 800))
-            results = model(img)
-            for i in results:
-                for j in i.boxes:
-                    xyxy = j.xyxy[0]
-                    cls = j.cls
-                    label = results[0].names[int(cls)]
-                    cv2.putText(img, label, (int(xyxy[0]), int(xyxy[1])), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                    cv2.rectangle(img, (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3])), (0, 255, 0), 2)
-            cv2.imshow("Detect", img)
-            cv2.waitKey(0)
+        model = YOLO('runs/detect/train3/weights/last.pt')
+        image = 'test/20240413141840.jpg'
+        img = cv2.imread(image)
+        img = cv2.resize(img, (800, 800))
+        results = model(img)
+        for i in results:
+            for j in i.boxes:
+                xyxy = j.xyxy[0]
+                cls = j.cls
+                label = results[0].names[int(cls)]
+                cv2.putText(img, label, (int(xyxy[0]), int(xyxy[1])), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                cv2.rectangle(img, (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3])), (0, 255, 0), 2)
+        cv2.imshow("Detect", img)
+        cv2.waitKey(0)
+    elif 'path=' in sys.argv[1]:
+        a = sys.argv[1].split('=')
+        imageSource = glob.glob(a[1] + "/*.jpeg")
+        imageSource = imageSource + glob.glob(a[1] + "/*.jpg")
+        imageSource = imageSource + glob.glob(a[1] + "/*.png")
+        imageSource = imageSource + glob.glob(a[1] + "/*.bmp")
+        tool = Tool(imageSource)
+        tool.Run()
+    else:
+        print("Invalid argument.")
+        print("Usage: python main.py [train|test|path=your_path|detect]")
+        print("Example: python main.py test")
+        print("Example: python main.py train")
+        print("Example: python main.py path=test")
+        print("Example: python main.py detect")
