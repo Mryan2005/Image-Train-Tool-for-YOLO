@@ -121,7 +121,7 @@ class Tool:
                         print("Cannot undo.")
         cv2.destroyAllWindows()
         print("Finish")
-        print("Splitting dataset...")
+        print("Splitting dataset... ")
         split.split("datasets/original", 0.8, 0.1, 0.1, "datasets/split")
 
 
