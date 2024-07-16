@@ -10,6 +10,12 @@ os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 import split
 
 
+class imgProcessStep:
+    def __init__(self, image: np.ndarray, selectRetangle: tuple):
+        self.image = image
+        self.selectRetangle = selectRetangle
+
+
 class Stack:
     def __init__(self):
         self.stack = []
@@ -76,6 +82,7 @@ class Tool:
                 if len(self.selectRetangle) == 2:
                     image_cv2 = cv2.rectangle(image_cv2, self.selectRetangle[0], self.selectRetangle[1], (0, 255, 0),
                                               2)  # type: ignore
+                    a = imgProcessStep(image_cv2.copy(), self.selectRetangle)
                     self.saveRetangle.append((self.selectRetangle))
                     ima = image_cv2.copy()
                     self.workStack.push(ima)
@@ -134,7 +141,8 @@ if __name__ == "__main__":
         tool = Tool(imageSource)
         tool.Run()
     elif sys.argv[1] == "train":
-        # split.split("datasets/original", 0.8, 0.1, 0.1, "datasets/split")
+        # split.split("datasets/original", 0.8, 0.1, 0.1, "datasets/split",
+        #             "D:\\documents\\GitHub\\Image-Train-Tool-for-YOLO\\datasets\\split")
         file = open("a.yaml", "w")
         file.write("train: D:\\documents\\GitHub\\Image-Train-Tool-for-YOLO\\datasets\split\\train\\train.txt\n")
         file.write("val: D:\\documents\\GitHub\\Image-Train-Tool-for-YOLO\\datasets\\split\\valid\\valid.txt\n")
@@ -152,13 +160,12 @@ if __name__ == "__main__":
         model = YOLO('yolov8.yaml').load("yolov8n.pt")  # load a pretrained model (recommended for training)
 
         # Train the model
-        results = model.train(data='D:\\documents\\GitHub\\Image-Train-Tool-for-YOLO\\a.yaml', epochs=700, imgsz=800,
-                              patience=0)
+        results = model.train(data='D:\\documents\\GitHub\\Image-Train-Tool-for-YOLO\\a.yaml', epochs=200, imgsz=800,
+                              patience=0, device=0, batch=2)
     elif sys.argv[1] == 'detect':
-        model = YOLO('runs/detect/train3/weights/last.pt')
-        image = 'test/20240413141840.jpg'
+        model = YOLO('runs/detect/train/weights/last.pt')
+        image = 'test/8F1CD26C2763D2DDB777EF6DF6636584.jpg'
         img = cv2.imread(image)
-        img = cv2.resize(img, (800, 800))
         results = model(img)
         for i in results:
             for j in i.boxes:

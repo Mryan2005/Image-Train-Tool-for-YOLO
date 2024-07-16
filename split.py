@@ -1,16 +1,12 @@
 import os
 import random
 import shutil
+import time
 
 
-def split(root_dir: str, train_ratio: float, valid_ratio: float, test_ratio: float, split_dir: str):
-    # 划分比例
-    train_ratio = 0.8
-    valid_ratio = 0.1
-    test_ratio = 0.1
-
+def split(root_dir: str, train_ratio: float, valid_ratio: float, test_ratio: float, split_dir: str, workdir: str):
     # 设置随机种子
-    random.seed(42)
+    random.seed(time.time())
 
     os.makedirs(os.path.join(split_dir, 'train/images'), exist_ok=True)
     os.makedirs(os.path.join(split_dir, 'train/labels'), exist_ok=True)
@@ -32,14 +28,25 @@ def split(root_dir: str, train_ratio: float, valid_ratio: float, test_ratio: flo
     train_bound = int(train_ratio * len(image_files_shuffled))
     valid_bound = int((train_ratio + valid_ratio) * len(image_files_shuffled))
 
+    train_txt = open(split_dir + '/train/' + 'train.txt', 'w')
+    valid_txt = open(split_dir + '/valid/' + 'valid.txt', 'w')
+
     # 将图片和标签文件移动到相应的目录
     for i, (image_file, label_file) in enumerate(zip(image_files_shuffled, label_files_shuffled)):
-        if i < train_bound:
-            shutil.move(os.path.join(root_dir, 'images', image_file), os.path.join(split_dir, 'train/images', image_file))
-            shutil.move(os.path.join(root_dir, 'labels', label_file), os.path.join(split_dir, 'train/labels', label_file))
+        if i <= train_bound:
+            shutil.move(os.path.join(root_dir, 'images', image_file),
+                        os.path.join(split_dir, 'train/images', image_file))
+            shutil.move(os.path.join(root_dir, 'labels', label_file),
+                        os.path.join(split_dir, 'train/labels', label_file))
+            train_txt.write(workdir + '/train/images/' + image_file + '\n')
         elif i < valid_bound:
-            shutil.move(os.path.join(root_dir, 'images', image_file), os.path.join(split_dir, 'valid/images', image_file))
-            shutil.move(os.path.join(root_dir, 'labels', label_file), os.path.join(split_dir, 'valid/labels', label_file))
-        else:
-            shutil.move(os.path.join(root_dir, 'images', image_file), os.path.join(split_dir, 'test/images', image_file))
-            shutil.move(os.path.join(root_dir, 'labels', label_file), os.path.join(split_dir, 'test/labels', label_file))
+            shutil.move(os.path.join(root_dir, 'images', image_file),
+                        os.path.join(split_dir, 'valid/images', image_file))
+            shutil.move(os.path.join(root_dir, 'labels', label_file),
+                        os.path.join(split_dir, 'valid/labels', label_file))
+            valid_txt.write(workdir + '/valid/images/' + image_file + '\n')
+        # else:
+        #     shutil.move(os.path.join(root_dir, 'images', image_file),
+        #                 os.path.join(split_dir, 'test/images', image_file))
+        #     shutil.move(os.path.join(root_dir, 'labels', label_file),
+        #                 os.path.join(split_dir, 'test/labels', label_file))
