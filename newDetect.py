@@ -5,38 +5,38 @@ import numpy as np
 from ultralytics import YOLO
 
 
-def get_fixed_windows(wind_size, overlap_size, image: np.ndarray):
+def getFixedWindows(kernelSize, overlapSize, image: np.ndarray):
     '''
-    This function can generate overlapped windows given various image size
-    params:
-        image_size (w, h): the image width and height
-        wind_size (w, h): the window width and height
-        overlap (overlap_w, overlap_h): the overlap size contains x-axis and y-axis
+    此函数可在给定不同图像尺寸的情况下生成重叠窗口
+    参数:
+        kernelSize (w, h): 卷积核的宽度和高度
+        overlap (overlapW, overlapH): 重叠尺寸
 
-    return:
-        rects [(xmin, ymin, xmax, ymax)]: the windows in a list of rectangles
+    返回值:
+        rects: a list of windows
+        k: the number of windows
     '''
-    rects = np.zeros((100, wind_size[1], wind_size[0], 3), dtype=np.uint8)
-    image_size = (image.shape[1], image.shape[0])
-    assert overlap_size[0] < wind_size[0]
-    assert overlap_size[1] < wind_size[1]
+    rects = np.zeros((100, kernelSize[1], kernelSize[0], 3), dtype=np.uint8)
+    imageSize = (image.shape[1], image.shape[0])
+    assert overlapSize[0] < kernelSize[0]
+    assert overlapSize[1] < kernelSize[1]
 
-    im_w = wind_size[0] if image_size[0] < wind_size[0] else image_size[0]
-    im_h = wind_size[1] if image_size[1] < wind_size[1] else image_size[1]
+    imgW = kernelSize[0] if imageSize[0] < kernelSize[0] else imageSize[0]
+    imgH = kernelSize[1] if imageSize[1] < kernelSize[1] else imageSize[1]
 
-    stride_w = wind_size[0] - overlap_size[0]
-    stride_h = wind_size[1] - overlap_size[1]
+    strideW = kernelSize[0] - overlapSize[0]
+    strideH = kernelSize[1] - overlapSize[1]
 
     k = 0
 
-    for j in range(wind_size[1] - 1, im_h + stride_h, stride_h):
-        for i in range(wind_size[0] - 1, im_w + stride_w, stride_w):
+    for j in range(kernelSize[1] - 1, imgH + strideH, strideH):
+        for i in range(kernelSize[0] - 1, imgW + strideW, strideW):
             right, down = i + 1, j + 1
-            right = right if right < im_w else im_w
-            down = down if down < im_h else im_h
+            right = right if right < imgW else imgW
+            down = down if down < imgH else imgH
 
-            left = right - wind_size[0]
-            up = down - wind_size[1]
+            left = right - kernelSize[0]
+            up = down - kernelSize[1]
 
             rects[k] = image[up:down, left:right]
 
@@ -45,9 +45,8 @@ def get_fixed_windows(wind_size, overlap_size, image: np.ndarray):
 
 
 def preProcessImage(image: np.ndarray, kernelSize):
-    wind_size = kernelSize
-    overlap_size = (300, 200)
-    rets, n = get_fixed_windows(wind_size, overlap_size, image)
+    overlapSize = (300, 200)
+    rets, n = getFixedWindows(kernelSize, overlapSize, image)
     return rets, n
 
 
@@ -71,13 +70,13 @@ def detect(image: np.ndarray, model, kernelSize):
                 cv2.putText(rets[i], label, (int(b[0]), int(b[1])), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                 cv2.rectangle(rets[i], (int(b[0]), int(b[1])), (int(b[2]), int(b[3])), (0, 255, 0), 2)
         cv2.imshow("result", rets[i])
-        cv2.waitKey(0)
+        cv2.waitKey(3)
     cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
     img = cv2.imread('test.png')
     model = YOLO("yolov8n.onnx", task="detect")
-    kernelSize = (648, 648)
+    kernelSize = (640, 640)
     rets, n = preProcessImage(img, kernelSize)
     detect(img, model, kernelSize)
