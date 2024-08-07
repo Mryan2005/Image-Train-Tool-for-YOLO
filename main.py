@@ -9,6 +9,60 @@ from ultralytics import YOLO
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 import split
 
+class kernel:
+
+    def __init__(self, kernel_size: tuple, beginPlace: tuple):
+        self.kernel_size = kernel_size
+        self.kernel = np.ones((kernel_size[0], kernel_size[1]), np.uint8)
+        self.beginPlace = beginPlace
+        self.detectResult = []
+
+    def copy_to_kernel(self, image: np.ndarray) -> np.ndarray:
+        # 获取卷积核的大小
+        kernel_size = self.kernel.shape[0]
+
+        # 获取图像的左上角区域
+        image_part = image[self.beginPlace[0]:self.beginPlace[0]+kernel_size, self.beginPlace[1]:self.beginPlace[1]+kernel_size]
+
+        # 将图像的部分复制到卷积核中
+        self.kernel = image_part.copy()
+
+        return self.kernel
+
+def divideImageIntoNParts(image: np.ndarray, n: int):
+    height, width, _ = image.shape
+    stepLength = (height//n, width//n)
+    parts: list = []
+    for i in range(0, n, stepLength[0]):
+        for j in range(0, n, stepLength[1]):
+            ker = kernel(stepLength, (i, j))
+            parts.append(ker)
+    return parts
+
+def detectIamge(image: np.ndarray, model: YOLO):
+    parts = divideImageIntoNParts(image, 3)
+    for part in parts:
+        part.copy_to_kernel(image)
+        result = model(part.kernel)
+        part.detectResult = result
+    return parts
+
+def mergeParts(parts: list, image: np.ndarray):
+    for part in parts:
+        image[part.beginPlace[0]:part.beginPlace[0]+part.kernel_size[0], part.beginPlace[1]:part.beginPlace[1]+part.kernel_size[1]] = part.kernel
+    return image
+
+def drawDetectResult(image: np.ndarray, parts: list):
+    for part in parts:
+        for result in part.detectResult:
+            for i in result.boxes:
+                xyxy = i.xyxy[0]
+                cls = i.cls
+                label = result.names[int(cls)]
+                cv2.putText(image, label, (int(xyxy[0]), int(xyxy[1])), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                cv2.rectangle(image, (int(xyxy[0]), int(xyxy[1])), (int(xyxy[2]), int(xyxy[3])), 255, 2)
+    return image
+
 
 class imgProcessStep:
     def __init__(self, image: np.ndarray, selectRetangle: tuple):
@@ -129,7 +183,8 @@ class Tool:
         cv2.destroyAllWindows()
         print("Finish")
         print("Splitting dataset... ")
-        split.split("datasets/original", 0.8, 0.1, 0.1, "datasets/split")
+        split.split("datasets/original", 0.8, 0.1, 0.1, "datasets/split",
+                    "D:\\documents\\GitHub\\Image-Train-Tool-for-YOLO\\datasets\\split")
 
 
 if __name__ == "__main__":

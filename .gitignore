@@ -20,7 +20,6 @@ runs/detect/train3/events.out.tfevents.1713797547.元亨利贞.10316.0
 runs/detect/train3/confusion_matrix_normalized.png
 runs/detect/train3/confusion_matrix.png
 runs/detect/train3/args.yaml
-main.py
 datasets/split/valid/valid.txt
 datasets/split/valid/labels/17.txt
 datasets/split/valid/labels/16.txt
