@@ -77,7 +77,7 @@ def detect(image: np.ndarray, model, kernelSize):
 
 if __name__ == "__main__":
     img = cv2.imread('test.png')
-    model = YOLO("yolov8n.pt")
+    model = YOLO("yolov8n.onnx", task="detect")
     kernelSize = (648, 648)
     rets, n = preProcessImage(img, kernelSize)
     detect(img, model, kernelSize)
