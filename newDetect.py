@@ -82,8 +82,6 @@ def detect(image: np.ndarray, model, kernelSize):
                 cv2.rectangle(rets[i], (int(b[0]), int(b[1])), (int(b[2]), int(b[3])), (0, 255, 0), 2)
                 cv2.rectangle(image, (int(b[0] + logIt[i][0]), int(b[1] + logIt[i][1])),
                               (int(b[2] + logIt[i][0]), int(b[3] + logIt[i][1])), (0, 255, 0), 2)
-        cv2.imshow("result", rets[i])
-        cv2.waitKey(1)
     image = cv2.resize(image, (648, 648))
     result = model.predict(image)
     for j in result:
