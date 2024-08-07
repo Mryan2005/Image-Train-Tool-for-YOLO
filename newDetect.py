@@ -16,7 +16,6 @@ def getFixedWindows(kernelSize, overlapSize, image: np.ndarray):
         rects: a list of windows
         k: the number of windows
     '''
-    rects = np.zeros((100, kernelSize[1], kernelSize[0], 3), dtype=np.uint8)
     imageSize = (image.shape[1], image.shape[0])
     assert overlapSize[0] < kernelSize[0]
     assert overlapSize[1] < kernelSize[1]
@@ -26,6 +25,15 @@ def getFixedWindows(kernelSize, overlapSize, image: np.ndarray):
 
     strideW = kernelSize[0] - overlapSize[0]
     strideH = kernelSize[1] - overlapSize[1]
+
+    sum = 0
+
+    for j in range(kernelSize[1] - 1, imgH + strideH, strideH):
+        for i in range(kernelSize[0] - 1, imgW + strideW, strideW):
+            sum += 1
+
+    rects = np.zeros((sum, kernelSize[1], kernelSize[0], 3), dtype=np.uint8)
+    logIt = np.zeros((sum, 2), dtype=np.uint64)
 
     k = 0
 
@@ -39,22 +47,25 @@ def getFixedWindows(kernelSize, overlapSize, image: np.ndarray):
             up = down - kernelSize[1]
 
             rects[k] = image[up:down, left:right]
+            logIt[k][0] = left
+            logIt[k][1] = up
 
             k += 1
-    return rects, k
+
+    return rects, k, logIt
 
 
 def preProcessImage(image: np.ndarray, kernelSize):
-    overlapSize = (300, 200)
-    rets, n = getFixedWindows(kernelSize, overlapSize, image)
-    return rets, n
+    overlapSize = (kernelSize[0] // 4, kernelSize[1] // 4)
+    rets, n, logIt = getFixedWindows(kernelSize, overlapSize, image)
+    return rets, n, logIt
 
 
 def detect(image: np.ndarray, model, kernelSize):
     cv2.namedWindow("result", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("result", 648, 648)
     start = time.time()
-    rets, n = preProcessImage(image, kernelSize)
+    rets, n, logIt = preProcessImage(image, kernelSize)
     end = time.time()
     print("Preprocess time: ", end - start)
     for i in range(n):
@@ -69,14 +80,23 @@ def detect(image: np.ndarray, model, kernelSize):
                 label = model.names[int(cls)]
                 cv2.putText(rets[i], label, (int(b[0]), int(b[1])), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                 cv2.rectangle(rets[i], (int(b[0]), int(b[1])), (int(b[2]), int(b[3])), (0, 255, 0), 2)
+                cv2.rectangle(image, (int(b[0] + logIt[i][0]), int(b[1] + logIt[i][1])),
+                              (int(b[2] + logIt[i][0]), int(b[3] + logIt[i][1])), (0, 255, 0), 2)
         cv2.imshow("result", rets[i])
-        cv2.waitKey(3)
+        cv2.waitKey(1)
+    image = cv2.resize(image, (648, 648))
+    result = model.predict(image)
+    for j in result:
+        for c in j.boxes:
+            b = c.xyxy[0]
+            cv2.rectangle(image, (int(b[0]), int(b[1])), (int(b[2]), int(b[3]),), (0, 255, 0), 2)
+    cv2.imshow("result", image)
+    cv2.waitKey(0)
     cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
     img = cv2.imread('test.png')
     model = YOLO("yolov8n.onnx", task="detect")
-    kernelSize = (640, 640)
-    rets, n = preProcessImage(img, kernelSize)
+    kernelSize = (320, 320)
     detect(img, model, kernelSize)
